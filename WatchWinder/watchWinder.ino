@@ -28,7 +28,6 @@ U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE|U8G_I2C_OPT_DEV_0); // Initiate OLED 
 
 // Declare OLED Variables
 char str[10];
-int message = 0;
 
 //declare variables for the motor pins
 int motorPin1 = 8;    // Blue   - 28BYJ48 pin 1
@@ -64,6 +63,10 @@ enum { EV_NONE=0, EV_SHORTPRESS, EV_LONG };
 boolean button_was_pressed; // previous button state
 int button_pressed_counter; // Press running duration
 
+// Delclare Switch Variables
+int switchPin = 3;
+boolean bidirectional = true; // Turns both clockwise and aniclockwise if true.
+
 //////////////////////////////////////////////////////////////////////////////
 void setup() {
   //declare the motor pins as outputs
@@ -76,6 +79,8 @@ void setup() {
   pinMode(ledPin, OUTPUT);
   pinMode(buttonPin, INPUT);
   digitalWrite(buttonPin, HIGH);
+  pinMode(switchPin, INPUT);
+  digitalWrite(switchPin, HIGH);
   button_was_pressed = false;
   button_pressed_counter = 0;
   digitalWrite(ledPin, HIGH); // Turn on Power indicator LED
@@ -123,6 +128,7 @@ int handle_button(){
 
 //////////////////////////////////////////////////////////////////////////////
 void loop(){
+  bidirectional = digitalRead(switchPin);
   // Check if lock button is pushed for longPresSecs and set locked flag accordingly
   int event = handle_button();
   if(event == 2){
@@ -156,7 +162,7 @@ void loop(){
   
   long waitBetween = minWait*loopsPerSec; // Delay between turns minWait * loopsPerSec
 
-  // If WaitBetween is reached make one revolution clockwise (Actually anticlockwise)
+  // If WaitBetween is reached make one revolution clockwise
   if(icount == waitBetween){
     digitalWrite(ledPin, LOW);
     while(count <= (countsperrev*revs)){
@@ -164,14 +170,16 @@ void loop(){
       count++;
       if(count > (countsperrev*revs)){
         count = 0;
-        message = 0; // Set rotation message to show Clockwise (Next turn in the cycle)
         digitalWrite(ledPin, HIGH);
+        if(!bidirectional){
+          icount = 0;
+        }
         break;
       }
     }
   }
-  
-  // If WaitBetween is reached make one revolution "Clockwise" (Actually clockwise)
+
+  // If WaitBetween is reached make one revolution "Clockwise"
   if(icount == (waitBetween*2)){
     digitalWrite(ledPin, LOW);
     while(count <= (countsperrev*revs)){
@@ -179,7 +187,6 @@ void loop(){
       count++;
       if(count > (countsperrev*revs)){
         count = 0;
-        message = 1; // Set rotation message to show "Anticlockwise" (Next turn in the cycle)
         digitalWrite(ledPin, HIGH);
         break;
       }
@@ -209,11 +216,11 @@ void loop(){
     u8g.drawStr( 80, 47, dtostrf(revs, 5, 0, str));     // Revolutions Setting
     u8g.drawStr( 110, 47, "T");                         // Revolutions Unit (Turns)
 
-    // Display rotation message to indicate upcoming action [Bottom Left of Screen]
-    if (message == 0){
-      u8g.drawStr( 0, 62, "Clockwise");
+    // Display rotation setting [Bottom Left of Screen]
+    if (bidirectional){
+      u8g.drawStr( 0, 62, "Bidirectional"); // Turning both clockwise and anticlockwise
     } else {
-      u8g.drawStr( 0, 62, "Anticlockwise");
+      u8g.drawStr( 0, 62, "Clockwise"); // Only turning Clockwise
     }
 
     // Display Lock state [Bottom Right of Screen]
@@ -230,8 +237,8 @@ void loop(){
 //set pins to ULN2003 high in sequence from 1 to 4
 //delay "motorSpeed" between each pin setting (to determine speed)
 
-// Anticlockwise Function
-void anticlockwise()
+// Clockwise Function
+void clockwise()
 {
   for(int i = 0; i < 8; i++)
   {
@@ -240,8 +247,8 @@ void anticlockwise()
   }
 }
 
-// Clockwise Function
-void clockwise()
+// Anticlockwise Function
+void anticlockwise()
 {
   for(int i = 7; i >= 0; i--)
   {
